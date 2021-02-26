@@ -1,0 +1,83 @@
+{
+	// http://www.sublimetext.com/docs/3/color_schemes.html
+	"variables": {
+		"magenta": "#C792EA",
+		// "pink": "#FF5370",
+		"pinkishred": "#FF5370",
+		"red": "#F07178",
+		"orange": "#F78C6C",
+		"yellow": "#FFCB6B",
+		"green": "#C3E88D",
+		"lightblue": "#89DDFF",
+		"blue": "#82AAFF",
+		"grey": "#546E7A",
+		"brown": "#C17E70",
+		"white": "#EEFFFF",
+	},
+	"globals": {
+		"foreground": "var(white)",
+		"background": "#263238",
+	},
+	"rules": [
+		/*
+		name – the (arbitrary) name for the scope rule
+		foreground – the text color
+		background – the background color
+		foreground_adjust – adjustment to the foreground color, only valid with background
+		selection_foreground – the text color when selected
+		font_style – zero or more of bold, italic, separated by spaces
+		*/
+		{
+			"scope": "entity.name.file.ldraw",
+			"foreground": "var(yellow)",
+			"font_style": "bold italic",
+		},
+		{
+			"scope": "comment.line.ldraw, comment.line.double-slash.ldraw",
+			"foreground": "var(grey)",
+			"font_style": "italic",
+		},
+		{
+			"scope": "punctuation.definition.header.ldraw",
+			"foreground": "var(blue)",
+		},
+		{
+			"scope": "support.function.ldraw",
+			"foreground": "var(lightblue)",
+		},
+		{
+			"scope": "variable.parameter.ldraw, variable.parameter.color.ldraw",
+			"foreground": "var(orange)",
+		},
+		{
+			"scope": "variable.parameter.x.ldraw",
+			"foreground": "var(pinkishred)",
+		},
+		{
+			"scope": "variable.parameter.y.ldraw",
+			"foreground": "var(green)",
+		},
+		{
+			"scope": "variable.parameter.z.ldraw",
+			"foreground": "var(blue)",
+		},
+		{
+			"scope": "variable.parameter.v1.ldraw, variable.parameter.v3.ldraw",
+			"background": "color(var(grey) alpha(30%))",
+		},
+		{
+			"scope": "variable.parameter.subpart.ldraw",
+			"foreground": "var(magenta)",
+		},
+		{
+			"scope": "invalid.illegal.ldraw",
+			"foreground": "#FFFFFF",
+			"background": "var(red)",
+		},
+		{
+			"scope": "invalid.deprecated.ldraw, invalid.deprecated.comment.ldraw",
+			"foreground": "#FFFFFF",
+			"background": "var(magenta)",
+		},
+	],
+}

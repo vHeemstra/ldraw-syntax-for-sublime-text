@@ -1,0 +1,862 @@
+%YAML 1.2
+---
+#
+# LDraw syntax for Sublime Text 3
+# Author: Philip van Heemstra
+# Version: 2.00
+# Copyright (c) 2021 Philip van Heemstra
+# License:
+# This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+# http://creativecommons.org/licenses/by-nc-sa/4.0/
+
+# For LDraw file specification see: https://www.ldraw.org/article/218.html
+# For syntax reference of this file see: http://www.sublimetext.com/docs/3/syntax.html
+name: LDraw
+first_line_match: '^0 '
+file_extensions:
+  - ldr
+  - dat
+  - mpd
+scope: source.ldraw
+variables:
+  header_tags: '(?:Name|Author)'
+  # TODO
+  # https://www.ldraw.org/article/218.html#mheader
+  meta_commands: '(?:!LDRAW_ORG|!LICENSE|BFC|!HISTORY)'
+  # TODO
+  # https://www.ldraw.org/article/218.html#meta
+  # http://wiki.ldraw.org/index.php?title=List_of_Known_Unofficial_META_Commands
+  ws: '[ \t]'
+  not_ws: '[^ \t]'
+  any_float_or_int: '(?:-?\d*\.\d+|-?\d+)'
+  capture_invalid_float: |-
+    (?x:
+      # For more info see: https://regex101.com/r/L1kt8Z/1
+      (?:
+        (?: ## Valid numbers
+          \d # Single digits
+          |[1-9]\d+ # Integers
+          |[1-9]\d*\.\d{1,3}(?<!0) # Floats >1
+          |\.\d{1,3}(?<!0) # Floats <1
+        )
+        |
+        (?: ## Invalid numbers
+          (\.0*)0 # Zero as float with only trailing zeros
+          |(0+)\.\d{0,2}[1-9] # Floats <1, with leading zeros
+          |(0+)(?:0|[1-9]\d*)\.?\d* # Integers with leading zeros
+          |\d+(\.0*) # Integers as float
+          |\d*\.(?:[1-9]|\d[1-9])?(0+) # Floats with trailing zeros
+          |\d*\.\d{3}(\d+) # Any float with precision >3
+        )
+      )
+    )
+  float_with_optional_trailing_ws: '(?<={{ws}})-?{{capture_invalid_float}}(?={{ws}}|$){{ws}}?' # Capture ws between floats
+  float_without_optional_trailing_ws: '(?<={{ws}})-?{{capture_invalid_float}}(?={{ws}}|$)'
+  x_y_float: '{{float_with_optional_trailing_ws}}'
+  z_float: '{{float_without_optional_trailing_ws}}'
+  subpart: '(?:[a-zA-Z0-9_-]+\\)*[a-zA-Z0-9_-]+\.dat'
+  # TODO: filename restrictions
+  # https://www.ldraw.org/article/218.html#name
+
+contexts:
+  main: # only first line
+    - match: '^{{ws}}*0(?={{ws}}+)'
+      scope: punctuation.definition.comment.ldraw
+      set:
+        - meta_scope: entity.name.file.ldraw
+        - match: $
+          set: rest_of_file
+    - match: ''
+      set: rest_of_file
+
+  rest_of_file:
+    # Comments begin with a '0 '
+    - match: '^{{ws}}*0(?={{ws}})'
+      scope: punctuation.definition.comment.ldraw
+      push: comment
+
+    # Line commands begin with '1' through '5'
+    - match: '^{{ws}}*(?=[1-5]{{ws}})'
+      push: line_command
+
+
+  comment:
+    - meta_scope: comment.line.ldraw
+    - match: '{{ws}}+(?!(?://|{{meta_commands}}|{{header_tags}}))'
+      set:
+        - meta_scope: invalid.deprecated.comment.ldraw
+        - match: $
+          pop: true
+    - match: '{{ws}}+//'
+      set:
+        - meta_scope: comment.line.double-slash.ldraw
+        - match: $
+          pop: true
+    - match: '{{ws}}+(?={{meta_commands}})'
+      scope: punctuation.definition.metacommand.ldraw #TODO: better ones not punct.
+      set: meta_command
+    # TODO: other header tags
+    - match: '(?:{{header_tags}}):{{ws}}+'
+      scope: punctuation.definition.header.ldraw #TODO: better ones not punct.
+      set: header
+    - match: $
+      pop: true
+
+
+  meta_command:
+    - meta_scope: support.function.ldraw
+    - match: '{{ws}}+'
+      set:
+      - meta_scope: variable.parameter.ldraw
+      - match: $
+        pop: true
+    # TODO: other meta commands
+    - match: $
+      pop: true
+
+
+  header:
+    - meta_scope: support.function.ldraw
+    - match: '(?<=Name:{{ws}})'
+      set:
+      - meta_scope: entity.name.filename.ldraw
+      - match: $
+        pop: true
+    - match: '(?<=Author:{{ws}})'
+      set:
+      - meta_scope: entity.name.author.ldraw
+      - match: $
+        pop: true
+    # TODO: other header tags
+    - match: $
+      pop: true
+
+
+  line_command:
+    - meta_content_scope: meta.function-call
+    - match: '1{{ws}}?'
+      scope: support.function.ldraw #constant.language.ldraw
+      set: line_1
+    - match: '2{{ws}}?'
+      scope: support.function.ldraw #constant.language.ldraw
+      set: line_2
+    - match: '3{{ws}}?'
+      scope: support.function.ldraw #constant.language.ldraw
+      set: line_3
+    - match: '4{{ws}}?'
+      scope: support.function.ldraw #constant.language.ldraw
+      set: line_4
+    - match: '5{{ws}}?'
+      scope: support.function.ldraw #constant.language.ldraw
+      set: line_5
+    - include: end_line_or_invalid
+
+  line_1:
+    - meta_content_scope: meta.function-call
+    - match: '\d+(?={{ws}})'
+      scope: variable.parameter.color.ldraw
+      set:
+
+        - meta_content_scope: meta.function-call
+        - match: '{{x_y_float}}'
+          captures:
+            0: variable.parameter.v1.ldraw variable.parameter.x.ldraw
+            1: invalid.illegal.ldraw
+            2: invalid.illegal.ldraw
+            3: invalid.illegal.ldraw
+            4: invalid.illegal.ldraw
+            5: invalid.illegal.ldraw
+            6: invalid.illegal.ldraw
+          set:
+            - meta_content_scope: meta.function-call
+            - match: '{{x_y_float}}'
+              captures:
+                0: variable.parameter.v1.ldraw variable.parameter.y.ldraw
+                1: invalid.illegal.ldraw
+                2: invalid.illegal.ldraw
+                3: invalid.illegal.ldraw
+                4: invalid.illegal.ldraw
+                5: invalid.illegal.ldraw
+                6: invalid.illegal.ldraw
+              set:
+                - meta_content_scope: meta.function-call
+                - match: '{{z_float}}'
+                  captures:
+                    0: variable.parameter.v1.ldraw variable.parameter.z.ldraw
+                    1: invalid.illegal.ldraw
+                    2: invalid.illegal.ldraw
+                    3: invalid.illegal.ldraw
+                    4: invalid.illegal.ldraw
+                    5: invalid.illegal.ldraw
+                    6: invalid.illegal.ldraw
+                  set:
+
+                    - meta_content_scope: meta.function-call
+                    - match: '{{x_y_float}}'
+                      captures:
+                        0: variable.parameter.v2.ldraw variable.parameter.x.ldraw
+                        1: invalid.illegal.ldraw
+                        2: invalid.illegal.ldraw
+                        3: invalid.illegal.ldraw
+                        4: invalid.illegal.ldraw
+                        5: invalid.illegal.ldraw
+                        6: invalid.illegal.ldraw
+                      set:
+                        - meta_content_scope: meta.function-call
+                        - match: '{{x_y_float}}'
+                          captures:
+                            0: variable.parameter.v2.ldraw variable.parameter.y.ldraw
+                            1: invalid.illegal.ldraw
+                            2: invalid.illegal.ldraw
+                            3: invalid.illegal.ldraw
+                            4: invalid.illegal.ldraw
+                            5: invalid.illegal.ldraw
+                            6: invalid.illegal.ldraw
+                          set:
+                            - meta_content_scope: meta.function-call
+                            - match: '{{z_float}}'
+                              captures:
+                                0: variable.parameter.v2.ldraw variable.parameter.z.ldraw
+                                1: invalid.illegal.ldraw
+                                2: invalid.illegal.ldraw
+                                3: invalid.illegal.ldraw
+                                4: invalid.illegal.ldraw
+                                5: invalid.illegal.ldraw
+                                6: invalid.illegal.ldraw
+                              set:
+
+                                - meta_content_scope: meta.function-call
+                                - match: '{{x_y_float}}'
+                                  captures:
+                                    0: variable.parameter.v3.ldraw variable.parameter.x.ldraw
+                                    1: invalid.illegal.ldraw
+                                    2: invalid.illegal.ldraw
+                                    3: invalid.illegal.ldraw
+                                    4: invalid.illegal.ldraw
+                                    5: invalid.illegal.ldraw
+                                    6: invalid.illegal.ldraw
+                                  set:
+                                    - meta_content_scope: meta.function-call
+                                    - match: '{{x_y_float}}'
+                                      captures:
+                                        0: variable.parameter.v3.ldraw variable.parameter.y.ldraw
+                                        1: invalid.illegal.ldraw
+                                        2: invalid.illegal.ldraw
+                                        3: invalid.illegal.ldraw
+                                        4: invalid.illegal.ldraw
+                                        5: invalid.illegal.ldraw
+                                        6: invalid.illegal.ldraw
+                                      set:
+                                        - meta_content_scope: meta.function-call
+                                        - match: '{{z_float}}'
+                                          captures:
+                                            0: variable.parameter.v3.ldraw variable.parameter.z.ldraw
+                                            1: invalid.illegal.ldraw
+                                            2: invalid.illegal.ldraw
+                                            3: invalid.illegal.ldraw
+                                            4: invalid.illegal.ldraw
+                                            5: invalid.illegal.ldraw
+                                            6: invalid.illegal.ldraw
+                                          set:
+
+                                            - meta_content_scope: meta.function-call
+                                            - match: '{{x_y_float}}'
+                                              captures:
+                                                0: variable.parameter.v4.ldraw variable.parameter.x.ldraw
+                                                1: invalid.illegal.ldraw
+                                                2: invalid.illegal.ldraw
+                                                3: invalid.illegal.ldraw
+                                                4: invalid.illegal.ldraw
+                                                5: invalid.illegal.ldraw
+                                                6: invalid.illegal.ldraw
+                                              set:
+                                                - meta_content_scope: meta.function-call
+                                                - match: '{{x_y_float}}'
+                                                  captures:
+                                                    0: variable.parameter.v4.ldraw variable.parameter.y.ldraw
+                                                    1: invalid.illegal.ldraw
+                                                    2: invalid.illegal.ldraw
+                                                    3: invalid.illegal.ldraw
+                                                    4: invalid.illegal.ldraw
+                                                    5: invalid.illegal.ldraw
+                                                    6: invalid.illegal.ldraw
+                                                  set:
+                                                    - meta_content_scope: meta.function-call
+                                                    - match: '{{z_float}}'
+                                                      captures:
+                                                        0: variable.parameter.v4.ldraw variable.parameter.z.ldraw
+                                                        1: invalid.illegal.ldraw
+                                                        2: invalid.illegal.ldraw
+                                                        3: invalid.illegal.ldraw
+                                                        4: invalid.illegal.ldraw
+                                                        5: invalid.illegal.ldraw
+                                                        6: invalid.illegal.ldraw
+                                                      set:
+
+                                                        - meta_content_scope: meta.function-call
+                                                        - match: '(?<={{ws}}){{subpart}}'
+                                                          scope: variable.parameter.subpart.ldraw
+                                                          set:
+                                                            # ...
+                                                            - include: end_line_or_invalid
+
+                                                        - include: end_line_or_invalid
+                                                    - include: end_line_or_invalid
+                                                - include: end_line_or_invalid
+
+                                            - include: end_line_or_invalid
+                                        - include: end_line_or_invalid
+                                    - include: end_line_or_invalid
+
+                                - include: end_line_or_invalid
+                            - include: end_line_or_invalid
+                        - include: end_line_or_invalid
+
+                    - include: end_line_or_invalid
+                - include: end_line_or_invalid
+            - include: end_line_or_invalid
+
+        - include: end_line_or_invalid
+    - include: end_line_or_invalid
+
+  line_2:
+    - meta_content_scope: meta.function-call
+    - match: '\d+(?={{ws}})'
+      scope: variable.parameter.color.ldraw
+      set:
+
+        - meta_content_scope: meta.function-call # annotates parent match and child match ????
+        # - match: '(?<={{ws}}){{any_float_or_int}}{{ws}}?'
+        #   scope: variable.parameter.v1.ldraw variable.parameter.x.ldraw
+        - match: '{{x_y_float}}'
+          captures:
+            0: variable.parameter.v1.ldraw variable.parameter.x.ldraw
+            1: invalid.illegal.ldraw
+            2: invalid.illegal.ldraw
+            3: invalid.illegal.ldraw
+            4: invalid.illegal.ldraw
+            5: invalid.illegal.ldraw
+            6: invalid.illegal.ldraw
+          set:
+            - meta_content_scope: meta.function-call
+            - match: '{{x_y_float}}'
+              captures:
+                0: variable.parameter.v1.ldraw variable.parameter.y.ldraw
+                1: invalid.illegal.ldraw
+                2: invalid.illegal.ldraw
+                3: invalid.illegal.ldraw
+                4: invalid.illegal.ldraw
+                5: invalid.illegal.ldraw
+                6: invalid.illegal.ldraw
+              set:
+                - meta_content_scope: meta.function-call
+                - match: '{{z_float}}'
+                  captures:
+                    0: variable.parameter.v1.ldraw variable.parameter.z.ldraw
+                    1: invalid.illegal.ldraw
+                    2: invalid.illegal.ldraw
+                    3: invalid.illegal.ldraw
+                    4: invalid.illegal.ldraw
+                    5: invalid.illegal.ldraw
+                    6: invalid.illegal.ldraw
+                  set:
+
+                    - meta_content_scope: meta.function-call
+                    - match: '{{x_y_float}}'
+                      captures:
+                        0: variable.parameter.v2.ldraw variable.parameter.x.ldraw
+                        1: invalid.illegal.ldraw
+                        2: invalid.illegal.ldraw
+                        3: invalid.illegal.ldraw
+                        4: invalid.illegal.ldraw
+                        5: invalid.illegal.ldraw
+                        6: invalid.illegal.ldraw
+                      set:
+                        - meta_content_scope: meta.function-call
+                        - match: '{{x_y_float}}'
+                          captures:
+                            0: variable.parameter.v2.ldraw variable.parameter.y.ldraw
+                            1: invalid.illegal.ldraw
+                            2: invalid.illegal.ldraw
+                            3: invalid.illegal.ldraw
+                            4: invalid.illegal.ldraw
+                            5: invalid.illegal.ldraw
+                            6: invalid.illegal.ldraw
+                          set:
+                            - meta_content_scope: meta.function-call
+                            - match: '{{z_float}}'
+                              captures:
+                                0: variable.parameter.v2.ldraw variable.parameter.z.ldraw
+                                1: invalid.illegal.ldraw
+                                2: invalid.illegal.ldraw
+                                3: invalid.illegal.ldraw
+                                4: invalid.illegal.ldraw
+                                5: invalid.illegal.ldraw
+                                6: invalid.illegal.ldraw
+                              set:
+                                # ...
+                                - include: end_line_or_invalid
+                            - include: end_line_or_invalid
+                        - include: end_line_or_invalid
+
+                    - include: end_line_or_invalid
+                - include: end_line_or_invalid
+            - include: end_line_or_invalid
+
+        - include: end_line_or_invalid
+    - include: end_line_or_invalid
+
+  line_3:
+    - meta_content_scope: meta.function-call
+    - match: '\d+(?={{ws}})'
+      scope: variable.parameter.color.ldraw
+      set:
+
+        - meta_content_scope: meta.function-call
+        - match: '{{x_y_float}}'
+          captures:
+            0: variable.parameter.v1.ldraw variable.parameter.x.ldraw
+            1: invalid.illegal.ldraw
+            2: invalid.illegal.ldraw
+            3: invalid.illegal.ldraw
+            4: invalid.illegal.ldraw
+            5: invalid.illegal.ldraw
+            6: invalid.illegal.ldraw
+          set:
+            - meta_content_scope: meta.function-call
+            - match: '{{x_y_float}}'
+              captures:
+                0: variable.parameter.v1.ldraw variable.parameter.y.ldraw
+                1: invalid.illegal.ldraw
+                2: invalid.illegal.ldraw
+                3: invalid.illegal.ldraw
+                4: invalid.illegal.ldraw
+                5: invalid.illegal.ldraw
+                6: invalid.illegal.ldraw
+              set:
+                - meta_content_scope: meta.function-call
+                - match: '{{z_float}}'
+                  captures:
+                    0: variable.parameter.v1.ldraw variable.parameter.z.ldraw
+                    1: invalid.illegal.ldraw
+                    2: invalid.illegal.ldraw
+                    3: invalid.illegal.ldraw
+                    4: invalid.illegal.ldraw
+                    5: invalid.illegal.ldraw
+                    6: invalid.illegal.ldraw
+                  set:
+
+                    - meta_content_scope: meta.function-call
+                    - match: '{{x_y_float}}'
+                      captures:
+                        0: variable.parameter.v2.ldraw variable.parameter.x.ldraw
+                        1: invalid.illegal.ldraw
+                        2: invalid.illegal.ldraw
+                        3: invalid.illegal.ldraw
+                        4: invalid.illegal.ldraw
+                        5: invalid.illegal.ldraw
+                        6: invalid.illegal.ldraw
+                      set:
+                        - meta_content_scope: meta.function-call
+                        - match: '{{x_y_float}}'
+                          captures:
+                            0: variable.parameter.v2.ldraw variable.parameter.y.ldraw
+                            1: invalid.illegal.ldraw
+                            2: invalid.illegal.ldraw
+                            3: invalid.illegal.ldraw
+                            4: invalid.illegal.ldraw
+                            5: invalid.illegal.ldraw
+                            6: invalid.illegal.ldraw
+                          set:
+                            - meta_content_scope: meta.function-call
+                            - match: '{{z_float}}'
+                              captures:
+                                0: variable.parameter.v2.ldraw variable.parameter.z.ldraw
+                                1: invalid.illegal.ldraw
+                                2: invalid.illegal.ldraw
+                                3: invalid.illegal.ldraw
+                                4: invalid.illegal.ldraw
+                                5: invalid.illegal.ldraw
+                                6: invalid.illegal.ldraw
+                              set:
+
+                                - meta_content_scope: meta.function-call
+                                - match: '{{x_y_float}}'
+                                  captures:
+                                    0: variable.parameter.v3.ldraw variable.parameter.x.ldraw
+                                    1: invalid.illegal.ldraw
+                                    2: invalid.illegal.ldraw
+                                    3: invalid.illegal.ldraw
+                                    4: invalid.illegal.ldraw
+                                    5: invalid.illegal.ldraw
+                                    6: invalid.illegal.ldraw
+                                  set:
+                                    - meta_content_scope: meta.function-call
+                                    - match: '{{x_y_float}}'
+                                      captures:
+                                        0: variable.parameter.v3.ldraw variable.parameter.y.ldraw
+                                        1: invalid.illegal.ldraw
+                                        2: invalid.illegal.ldraw
+                                        3: invalid.illegal.ldraw
+                                        4: invalid.illegal.ldraw
+                                        5: invalid.illegal.ldraw
+                                        6: invalid.illegal.ldraw
+                                      set:
+                                        - meta_content_scope: meta.function-call
+                                        - match: '{{z_float}}'
+                                          captures:
+                                            0: variable.parameter.v3.ldraw variable.parameter.z.ldraw
+                                            1: invalid.illegal.ldraw
+                                            2: invalid.illegal.ldraw
+                                            3: invalid.illegal.ldraw
+                                            4: invalid.illegal.ldraw
+                                            5: invalid.illegal.ldraw
+                                            6: invalid.illegal.ldraw
+                                          set:
+                                            # ...
+                                            - include: end_line_or_invalid
+                                        - include: end_line_or_invalid
+                                    - include: end_line_or_invalid
+
+                                - include: end_line_or_invalid
+                            - include: end_line_or_invalid
+                        - include: end_line_or_invalid
+
+                    - include: end_line_or_invalid
+                - include: end_line_or_invalid
+            - include: end_line_or_invalid
+
+        - include: end_line_or_invalid
+    - include: end_line_or_invalid
+
+  line_4:
+    - meta_content_scope: meta.function-call
+    - match: '\d+(?={{ws}})'
+      scope: variable.parameter.color.ldraw
+      set:
+
+        - meta_content_scope: meta.function-call
+        - match: '{{x_y_float}}'
+          captures:
+            0: variable.parameter.v1.ldraw variable.parameter.x.ldraw
+            1: invalid.illegal.ldraw
+            2: invalid.illegal.ldraw
+            3: invalid.illegal.ldraw
+            4: invalid.illegal.ldraw
+            5: invalid.illegal.ldraw
+            6: invalid.illegal.ldraw
+          set:
+            - meta_content_scope: meta.function-call
+            - match: '{{x_y_float}}'
+              captures:
+                0: variable.parameter.v1.ldraw variable.parameter.y.ldraw
+                1: invalid.illegal.ldraw
+                2: invalid.illegal.ldraw
+                3: invalid.illegal.ldraw
+                4: invalid.illegal.ldraw
+                5: invalid.illegal.ldraw
+                6: invalid.illegal.ldraw
+              set:
+                - meta_content_scope: meta.function-call
+                - match: '{{z_float}}'
+                  captures:
+                    0: variable.parameter.v1.ldraw variable.parameter.z.ldraw
+                    1: invalid.illegal.ldraw
+                    2: invalid.illegal.ldraw
+                    3: invalid.illegal.ldraw
+                    4: invalid.illegal.ldraw
+                    5: invalid.illegal.ldraw
+                    6: invalid.illegal.ldraw
+                  set:
+
+                    - meta_content_scope: meta.function-call
+                    - match: '{{x_y_float}}'
+                      captures:
+                        0: variable.parameter.v2.ldraw variable.parameter.x.ldraw
+                        1: invalid.illegal.ldraw
+                        2: invalid.illegal.ldraw
+                        3: invalid.illegal.ldraw
+                        4: invalid.illegal.ldraw
+                        5: invalid.illegal.ldraw
+                        6: invalid.illegal.ldraw
+                      set:
+                        - meta_content_scope: meta.function-call
+                        - match: '{{x_y_float}}'
+                          captures:
+                            0: variable.parameter.v2.ldraw variable.parameter.y.ldraw
+                            1: invalid.illegal.ldraw
+                            2: invalid.illegal.ldraw
+                            3: invalid.illegal.ldraw
+                            4: invalid.illegal.ldraw
+                            5: invalid.illegal.ldraw
+                            6: invalid.illegal.ldraw
+                          set:
+                            - meta_content_scope: meta.function-call
+                            - match: '{{z_float}}'
+                              captures:
+                                0: variable.parameter.v2.ldraw variable.parameter.z.ldraw
+                                1: invalid.illegal.ldraw
+                                2: invalid.illegal.ldraw
+                                3: invalid.illegal.ldraw
+                                4: invalid.illegal.ldraw
+                                5: invalid.illegal.ldraw
+                                6: invalid.illegal.ldraw
+                              set:
+
+                                - meta_content_scope: meta.function-call
+                                - match: '{{x_y_float}}'
+                                  captures:
+                                    0: variable.parameter.v3.ldraw variable.parameter.x.ldraw
+                                    1: invalid.illegal.ldraw
+                                    2: invalid.illegal.ldraw
+                                    3: invalid.illegal.ldraw
+                                    4: invalid.illegal.ldraw
+                                    5: invalid.illegal.ldraw
+                                    6: invalid.illegal.ldraw
+                                  set:
+                                    - meta_content_scope: meta.function-call
+                                    - match: '{{x_y_float}}'
+                                      captures:
+                                        0: variable.parameter.v3.ldraw variable.parameter.y.ldraw
+                                        1: invalid.illegal.ldraw
+                                        2: invalid.illegal.ldraw
+                                        3: invalid.illegal.ldraw
+                                        4: invalid.illegal.ldraw
+                                        5: invalid.illegal.ldraw
+                                        6: invalid.illegal.ldraw
+                                      set:
+                                        - meta_content_scope: meta.function-call
+                                        - match: '{{z_float}}'
+                                          captures:
+                                            0: variable.parameter.v3.ldraw variable.parameter.z.ldraw
+                                            1: invalid.illegal.ldraw
+                                            2: invalid.illegal.ldraw
+                                            3: invalid.illegal.ldraw
+                                            4: invalid.illegal.ldraw
+                                            5: invalid.illegal.ldraw
+                                            6: invalid.illegal.ldraw
+                                          set:
+
+                                            - meta_content_scope: meta.function-call
+                                            - match: '{{x_y_float}}'
+                                              captures:
+                                                0: variable.parameter.v4.ldraw variable.parameter.x.ldraw
+                                                1: invalid.illegal.ldraw
+                                                2: invalid.illegal.ldraw
+                                                3: invalid.illegal.ldraw
+                                                4: invalid.illegal.ldraw
+                                                5: invalid.illegal.ldraw
+                                                6: invalid.illegal.ldraw
+                                              set:
+                                                - meta_content_scope: meta.function-call
+                                                - match: '{{x_y_float}}'
+                                                  captures:
+                                                    0: variable.parameter.v4.ldraw variable.parameter.y.ldraw
+                                                    1: invalid.illegal.ldraw
+                                                    2: invalid.illegal.ldraw
+                                                    3: invalid.illegal.ldraw
+                                                    4: invalid.illegal.ldraw
+                                                    5: invalid.illegal.ldraw
+                                                    6: invalid.illegal.ldraw
+                                                  set:
+                                                    - meta_content_scope: meta.function-call
+                                                    - match: '{{z_float}}'
+                                                      captures:
+                                                        0: variable.parameter.v4.ldraw variable.parameter.z.ldraw
+                                                        1: invalid.illegal.ldraw
+                                                        2: invalid.illegal.ldraw
+                                                        3: invalid.illegal.ldraw
+                                                        4: invalid.illegal.ldraw
+                                                        5: invalid.illegal.ldraw
+                                                        6: invalid.illegal.ldraw
+                                                      set:
+                                                        # ...
+                                                        - include: end_line_or_invalid
+                                                    - include: end_line_or_invalid
+                                                - include: end_line_or_invalid
+
+                                            - include: end_line_or_invalid
+                                        - include: end_line_or_invalid
+                                    - include: end_line_or_invalid
+
+                                - include: end_line_or_invalid
+                            - include: end_line_or_invalid
+                        - include: end_line_or_invalid
+
+                    - include: end_line_or_invalid
+                - include: end_line_or_invalid
+            - include: end_line_or_invalid
+
+        - include: end_line_or_invalid
+    - include: end_line_or_invalid
+
+  line_5:
+    - meta_content_scope: meta.function-call
+    - match: '\d+(?={{ws}})'
+      scope: variable.parameter.color.ldraw
+      set:
+
+        - meta_content_scope: meta.function-call
+        - match: '{{x_y_float}}'
+          captures:
+            0: variable.parameter.v1.ldraw variable.parameter.x.ldraw
+            1: invalid.illegal.ldraw
+            2: invalid.illegal.ldraw
+            3: invalid.illegal.ldraw
+            4: invalid.illegal.ldraw
+            5: invalid.illegal.ldraw
+            6: invalid.illegal.ldraw
+          set:
+            - meta_content_scope: meta.function-call
+            - match: '{{x_y_float}}'
+              captures:
+                0: variable.parameter.v1.ldraw variable.parameter.y.ldraw
+                1: invalid.illegal.ldraw
+                2: invalid.illegal.ldraw
+                3: invalid.illegal.ldraw
+                4: invalid.illegal.ldraw
+                5: invalid.illegal.ldraw
+                6: invalid.illegal.ldraw
+              set:
+                - meta_content_scope: meta.function-call
+                - match: '{{z_float}}'
+                  captures:
+                    0: variable.parameter.v1.ldraw variable.parameter.z.ldraw
+                    1: invalid.illegal.ldraw
+                    2: invalid.illegal.ldraw
+                    3: invalid.illegal.ldraw
+                    4: invalid.illegal.ldraw
+                    5: invalid.illegal.ldraw
+                    6: invalid.illegal.ldraw
+                  set:
+
+                    - meta_content_scope: meta.function-call
+                    - match: '{{x_y_float}}'
+                      captures:
+                        0: variable.parameter.v2.ldraw variable.parameter.x.ldraw
+                        1: invalid.illegal.ldraw
+                        2: invalid.illegal.ldraw
+                        3: invalid.illegal.ldraw
+                        4: invalid.illegal.ldraw
+                        5: invalid.illegal.ldraw
+                        6: invalid.illegal.ldraw
+                      set:
+                        - meta_content_scope: meta.function-call
+                        - match: '{{x_y_float}}'
+                          captures:
+                            0: variable.parameter.v2.ldraw variable.parameter.y.ldraw
+                            1: invalid.illegal.ldraw
+                            2: invalid.illegal.ldraw
+                            3: invalid.illegal.ldraw
+                            4: invalid.illegal.ldraw
+                            5: invalid.illegal.ldraw
+                            6: invalid.illegal.ldraw
+                          set:
+                            - meta_content_scope: meta.function-call
+                            - match: '{{z_float}}'
+                              captures:
+                                0: variable.parameter.v2.ldraw variable.parameter.z.ldraw
+                                1: invalid.illegal.ldraw
+                                2: invalid.illegal.ldraw
+                                3: invalid.illegal.ldraw
+                                4: invalid.illegal.ldraw
+                                5: invalid.illegal.ldraw
+                                6: invalid.illegal.ldraw
+                              set:
+
+                                - meta_content_scope: meta.function-call
+                                - match: '{{x_y_float}}'
+                                  captures:
+                                    0: variable.parameter.v3.ldraw variable.parameter.x.ldraw
+                                    1: invalid.illegal.ldraw
+                                    2: invalid.illegal.ldraw
+                                    3: invalid.illegal.ldraw
+                                    4: invalid.illegal.ldraw
+                                    5: invalid.illegal.ldraw
+                                    6: invalid.illegal.ldraw
+                                  set:
+                                    - meta_content_scope: meta.function-call
+                                    - match: '{{x_y_float}}'
+                                      captures:
+                                        0: variable.parameter.v3.ldraw variable.parameter.y.ldraw
+                                        1: invalid.illegal.ldraw
+                                        2: invalid.illegal.ldraw
+                                        3: invalid.illegal.ldraw
+                                        4: invalid.illegal.ldraw
+                                        5: invalid.illegal.ldraw
+                                        6: invalid.illegal.ldraw
+                                      set:
+                                        - meta_content_scope: meta.function-call
+                                        - match: '{{z_float}}'
+                                          captures:
+                                            0: variable.parameter.v3.ldraw variable.parameter.z.ldraw
+                                            1: invalid.illegal.ldraw
+                                            2: invalid.illegal.ldraw
+                                            3: invalid.illegal.ldraw
+                                            4: invalid.illegal.ldraw
+                                            5: invalid.illegal.ldraw
+                                            6: invalid.illegal.ldraw
+                                          set:
+
+                                            - meta_content_scope: meta.function-call
+                                            - match: '{{x_y_float}}'
+                                              captures:
+                                                0: variable.parameter.v4.ldraw variable.parameter.x.ldraw
+                                                1: invalid.illegal.ldraw
+                                                2: invalid.illegal.ldraw
+                                                3: invalid.illegal.ldraw
+                                                4: invalid.illegal.ldraw
+                                                5: invalid.illegal.ldraw
+                                                6: invalid.illegal.ldraw
+                                              set:
+                                                - meta_content_scope: meta.function-call
+                                                - match: '{{x_y_float}}'
+                                                  captures:
+                                                    0: variable.parameter.v4.ldraw variable.parameter.y.ldraw
+                                                    1: invalid.illegal.ldraw
+                                                    2: invalid.illegal.ldraw
+                                                    3: invalid.illegal.ldraw
+                                                    4: invalid.illegal.ldraw
+                                                    5: invalid.illegal.ldraw
+                                                    6: invalid.illegal.ldraw
+                                                  set:
+                                                    - meta_content_scope: meta.function-call
+                                                    - match: '{{z_float}}'
+                                                      captures:
+                                                        0: variable.parameter.v4.ldraw variable.parameter.z.ldraw
+                                                        1: invalid.illegal.ldraw
+                                                        2: invalid.illegal.ldraw
+                                                        3: invalid.illegal.ldraw
+                                                        4: invalid.illegal.ldraw
+                                                        5: invalid.illegal.ldraw
+                                                        6: invalid.illegal.ldraw
+                                                      set:
+                                                        # ...
+                                                        - include: end_line_or_invalid
+                                                    - include: end_line_or_invalid
+                                                - include: end_line_or_invalid
+
+                                            - include: end_line_or_invalid
+                                        - include: end_line_or_invalid
+                                    - include: end_line_or_invalid
+
+                                - include: end_line_or_invalid
+                            - include: end_line_or_invalid
+                        - include: end_line_or_invalid
+
+                    - include: end_line_or_invalid
+                - include: end_line_or_invalid
+            - include: end_line_or_invalid
+
+        - include: end_line_or_invalid
+    - include: end_line_or_invalid
+
+
+  end_line_or_invalid:
+    - match: $
+      pop: true
+    - match: '{{not_ws}}+'
+      set:
+        - meta_scope: invalid.illegal.ldraw
+        - match: $
+          pop: true
