@@ -1,4 +1,4 @@
-# Syntaxt highlighting for LDraw files in Sublime Text 3
+# Syntaxt highlighting for LDraw™ files in Sublime Text 3
 
 <img src="./ldraw-syntax-for-sublime-text-screenshot.png?raw=true" height="400" alt="Screenshot">
 
@@ -56,3 +56,5 @@ Although most highlighting should probably work fine in your current theme and c
 
 ## License
 This work is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+[LDraw](https://www.ldraw.org)™ is a trademark owned and licensed by the Estate of James Jessiman
